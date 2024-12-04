@@ -34,43 +34,83 @@ import confetti from "https://esm.run/canvas-confetti@1"
 
 // Some useful elements
 const guessInput = document.getElementById('guess-input')
+const guessInputForm = document.getElementById('guess-input-form')
 const messageContainer = document.getElementsByClassName('message-container')[0]
 const emojiCluesContainer = document.getElementsByClassName('emoji-clues-container')[0]
 
+const successAlert = new Audio('assets/sparkle-ding.mp3')
+const failAlert = new Audio('assets/fatal-error.mp3')
+const emptyInputAlert = new Audio('assets/add-note-attention.mp3')
+const goToNextAlert = new Audio('assets/deep-low-whoosh.mp3')
+const completedAlert = new Audio('assets/christmas-sleigh-bell-alert.mp3')
+
 let attempts
 let randomFilmID
-let rolledFilm
+let rolledMovie
 
 function rollAMovie() {
+  goToNextAlert.play()
   attempts = 3
   randomFilmID = Math.floor(Math.random() * films.length)
-  rolledFilm = films[randomFilmID]
-  const emojiClueElem = rolledFilm.emoji.map((emo, idx) => `
-    <span title='${rolledFilm.ariaLabel[idx]}'>${emo}</span>
+  rolledMovie = films[randomFilmID]
+  const ariaLabels = rolledMovie.ariaLabel.split(", ")
+  const emojiClueElem = rolledMovie.emoji.map((emo, idx) => `
+    <span title='${ariaLabels[idx]}' class='emoji'>${emo}</span>
   `).join('')
   emojiCluesContainer.innerHTML = emojiClueElem
-  emojiCluesContainer.setAttribute('aria-label', rolledFilm.ariaLabel.join(', '))
+  emojiCluesContainer.setAttribute('aria-label', rolledMovie.ariaLabel)
   messageContainer.textContent = `You have ${attempts} guesses remaining.`
 }
 
 rollAMovie()
 
+function rollANewMovie() {
+  emojiCluesContainer.innerHTML = emojiPlaceholder()
+  guessInput.disabled = true
+  document.querySelector('button[type=submit]').disabled = true
+  document.querySelector('button[type=submit]').textContent = 'Rolling in new emoji clues...'
+  setTimeout(() => {
+    guessInput.disabled = false
+    guessInput.focus()
+    document.querySelector('button[type=submit]').disabled = false
+    document.querySelector('button[type=submit]').textContent = 'Submit Guess'
+    films.splice(randomFilmID, 1)
+    if (films.length === 0) {
+      completedAlert.play()
+      guessInputForm.style.display = 'none'
+      messageContainer.textContent = ''
+      emojiCluesContainer.textContent = "That's all folks!"
+    } else {
+      rollAMovie()
+    }
+  }, 3000);
+}
+
+function checkForAMatch(inputStr, targetFilm) {
+  const normalizedInput = preprocessText(inputStr)
+  const normalizedFilm = preprocessText(targetFilm)
+  return normalizedInput === normalizedFilm
+}
+
 function handleSubmission(e) {
   e.preventDefault()
   const formData = new FormData(e.target)
   for (const entry of formData.entries()) {
-    if (entry[1] === '') {
+    if (entry[1].trim() === '') {
+      emptyInputAlert.play()
       messageContainer.textContent = `You didn't type anything! You still have ${attempts} guesses remaining.`
     } else {
-      const matchFound = checkForAMatch(entry[1], rolledFilm.title)
+      const matchFound = checkForAMatch(entry[1], rolledMovie.title)
       if (matchFound) {
         messageContainer.textContent = "Correct!"
+        successAlert.play()
         throwConfetti()
         rollANewMovie()
       }
       else {
         --attempts
-        messageContainer.textContent = attempts == 0 ? `The film was '${rolledFilm.title}'!` : `Incorrect! You have ${attempts} guesses remaining.`
+        failAlert.play()
+        messageContainer.textContent = attempts == 0 ? `The film was '${rolledMovie.title}'!` : `Incorrect! You have ${attempts} guesses remaining.`
       }
     }
 
@@ -80,31 +120,9 @@ function handleSubmission(e) {
   }
 }
 
-function checkForAMatch(inputStr, targetFilm) {
-  const normalizedInput = preprocessText(inputStr)
-  const normalizedFilm = preprocessText(targetFilm)
-  return normalizedInput === normalizedFilm
-}
+guessInputForm.addEventListener('submit', handleSubmission)
 
-function rollANewMovie() {
-  document.querySelector('button[type=submit]').disabled = true
-  document.querySelector('button[type=submit]').textContent = 'Rolling in a new emojis...'
-  setTimeout(() => {
-    document.querySelector('button[type=submit]').disabled = false
-    document.querySelector('button[type=submit]').textContent = 'Submit Guess'
-    films.splice(randomFilmID, 1)
-    if (films.length === 0) {
-      guessInput.style.display = 'none'
-      messageContainer.textContent = ''
-      emojiCluesContainer.textContent = "That's all folks!"
-    } else {
-      rollAMovie()
-    }
-  }, 3000);
-}
-
-guessInput.addEventListener('submit', handleSubmission)
-
+// Function to throw confetti when the guess is correct
 function throwConfetti() {
   confetti({
     particleCount: 100,
@@ -115,7 +133,7 @@ function throwConfetti() {
 }
 
 
-// STRETCH GOALS
+/* STRETCH GOALS */
 
 const stopWords = [
   'a', 'an', 'the', 'in', 'on', 'at', 'by', 'with', 'and', 'but', 'or', 'for', 'nor', 'so', 'yet', 'to', 'from'
@@ -129,6 +147,15 @@ function preprocessText(text) {
 
   // Remove stop words
   words = words.filter(word => !stopWords.includes(word));
+
   // Join the words back together
   return words.join(' ');
+}
+
+// Function to add placeholders for emojis during transitions
+function emojiPlaceholder() {
+  const elem = rolledMovie.emoji.map(el => `
+    <span class='emoji-placeholder'>${el}</span>
+  `).join('')
+  return elem
 }

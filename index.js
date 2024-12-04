@@ -30,6 +30,7 @@ Stretch Goals
 */
 
 import { films } from '/data.js'
+import confetti from "https://esm.run/canvas-confetti@1"
 
 // Some useful elements
 const guessInput = document.getElementById('guess-input')
@@ -44,37 +45,53 @@ function rollAMovie() {
   attempts = 3
   randomFilmID = Math.floor(Math.random() * films.length)
   rolledFilm = films[randomFilmID]
-  emojiCluesContainer.textContent = rolledFilm.emoji.join(' ')
+  const emojiClueElem = rolledFilm.emoji.map((emo, idx) => `
+    <span title='${rolledFilm.ariaLabel[idx]}'>${emo}</span>
+  `).join('')
+  emojiCluesContainer.innerHTML = emojiClueElem
+  emojiCluesContainer.setAttribute('aria-label', rolledFilm.ariaLabel.join(', '))
   messageContainer.textContent = `You have ${attempts} guesses remaining.`
 }
 
 rollAMovie()
 
-function checkForAMatch(e) {
+function handleSubmission(e) {
   e.preventDefault()
   const formData = new FormData(e.target)
   for (const entry of formData.entries()) {
-    const input = entry[1].trim().replace(/\s{2,}/gm, " ").toLowerCase()
-    if (input === '') {
+    if (entry[1] === '') {
       messageContainer.textContent = `You didn't type anything! You still have ${attempts} guesses remaining.`
-    } else if (input === rolledFilm.title.toLowerCase()) {
-      messageContainer.textContent = "Correct!"
-      rollANewMovie()
     } else {
-      --attempts
-      messageContainer.textContent = attempts == 0 ? `The film was '${rolledFilm.title}'!` : `Incorrect! You have ${attempts} guesses remaining.`
+      const matchFound = checkForAMatch(entry[1], rolledFilm.title)
+      if (matchFound) {
+        messageContainer.textContent = "Correct!"
+        throwConfetti()
+        rollANewMovie()
+      }
+      else {
+        --attempts
+        messageContainer.textContent = attempts == 0 ? `The film was '${rolledFilm.title}'!` : `Incorrect! You have ${attempts} guesses remaining.`
+      }
     }
+
+    attempts === 0 && rollANewMovie()
+
+    e.target.reset() //this must be the last statement
   }
+}
 
-  attempts === 0 && rollANewMovie()
-
-  e.target.reset() //this must be the last statement
+function checkForAMatch(inputStr, targetFilm) {
+  const normalizedInput = preprocessText(inputStr)
+  const normalizedFilm = preprocessText(targetFilm)
+  return normalizedInput === normalizedFilm
 }
 
 function rollANewMovie() {
-
+  document.querySelector('button[type=submit]').disabled = true
+  document.querySelector('button[type=submit]').textContent = 'Rolling in a new emojis...'
   setTimeout(() => {
-
+    document.querySelector('button[type=submit]').disabled = false
+    document.querySelector('button[type=submit]').textContent = 'Submit Guess'
     films.splice(randomFilmID, 1)
     if (films.length === 0) {
       guessInput.style.display = 'none'
@@ -86,4 +103,32 @@ function rollANewMovie() {
   }, 3000);
 }
 
-guessInput.addEventListener('submit', checkForAMatch)
+guessInput.addEventListener('submit', handleSubmission)
+
+function throwConfetti() {
+  confetti({
+    particleCount: 100,
+    zIndex: 1,
+    spread: 100,
+    ticks: 175,
+  })
+}
+
+
+// STRETCH GOALS
+
+const stopWords = [
+  'a', 'an', 'the', 'in', 'on', 'at', 'by', 'with', 'and', 'but', 'or', 'for', 'nor', 'so', 'yet', 'to', 'from'
+];
+
+function preprocessText(text) {
+  // Convert to lowercase
+  let processedText = text.trim().replace(/\s{2,}/gm, " ").toLowerCase();
+  // Split text into words
+  let words = processedText.split(/\s+/);
+
+  // Remove stop words
+  words = words.filter(word => !stopWords.includes(word));
+  // Join the words back together
+  return words.join(' ');
+}

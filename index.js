@@ -35,3 +35,55 @@ import { films } from '/data.js'
 const guessInput = document.getElementById('guess-input')
 const messageContainer = document.getElementsByClassName('message-container')[0]
 const emojiCluesContainer = document.getElementsByClassName('emoji-clues-container')[0]
+
+let attempts
+let randomFilmID
+let rolledFilm
+
+function rollAMovie() {
+  attempts = 3
+  randomFilmID = Math.floor(Math.random() * films.length)
+  rolledFilm = films[randomFilmID]
+  emojiCluesContainer.textContent = rolledFilm.emoji.join(' ')
+  messageContainer.textContent = `You have ${attempts} guesses remaining.`
+}
+
+rollAMovie()
+
+function checkForAMatch(e) {
+  e.preventDefault()
+  const formData = new FormData(e.target)
+  for (const entry of formData.entries()) {
+    const input = entry[1].trim().replace(/\s{2,}/gm, " ").toLowerCase()
+    if (input === '') {
+      messageContainer.textContent = `You didn't type anything! You still have ${attempts} guesses remaining.`
+    } else if (input === rolledFilm.title.toLowerCase()) {
+      messageContainer.textContent = "Correct!"
+      rollANewMovie()
+    } else {
+      --attempts
+      messageContainer.textContent = attempts == 0 ? `The film was '${rolledFilm.title}'!` : `Incorrect! You have ${attempts} guesses remaining.`
+    }
+  }
+
+  attempts === 0 && rollANewMovie()
+
+  e.target.reset() //this must be the last statement
+}
+
+function rollANewMovie() {
+
+  setTimeout(() => {
+
+    films.splice(randomFilmID, 1)
+    if (films.length === 0) {
+      guessInput.style.display = 'none'
+      messageContainer.textContent = ''
+      emojiCluesContainer.textContent = "That's all folks!"
+    } else {
+      rollAMovie()
+    }
+  }, 3000);
+}
+
+guessInput.addEventListener('submit', checkForAMatch)

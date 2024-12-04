@@ -25,6 +25,8 @@ This fun and stimulating game challenges players to guess the title of popular C
 Let the guessing begin and have a jolly good time. 🎬🌟
 
 ### Happy Holidays! 🎄🎅
+&nbsp;
+
 
 # Getting Started
 
@@ -45,9 +47,7 @@ If we succeed with this, it will give anyone who wants to become a software deve
 The Frontend Developer Career Path aims to teach you everything you need to become a Junior Developer, or you could take a deep-dive with one of our advanced courses 🚀
 
 -  [Our courses](https://scrimba.com/allcourses)
-
 -  [The Frontend Career Path](https://scrimba.com/learn/frontend)
-
 -  [Become a Scrimba Pro member](https://scrimba.com/pricing)
 
 ### Happy Coding! 🧬
